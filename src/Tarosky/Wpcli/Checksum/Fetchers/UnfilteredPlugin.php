@@ -1,6 +1,8 @@
 <?php
 
-namespace WP_CLI\Fetchers;
+namespace Tarosky\Wpcli\Checksum\Fetchers;
+
+use WP_CLI\Fetchers\Base;
 
 /**
  * Fetch a WordPress plugin based on one of its attributes.
@@ -8,7 +10,6 @@ namespace WP_CLI\Fetchers;
  * This is a special version of the plugin fetcher. It doesn't use the
  * `all_plugins` filter, so that plugins cannot hide themselves from the
  * checks.
- *
  */
 class UnfilteredPlugin extends Base {
 
@@ -36,4 +37,3 @@ class UnfilteredPlugin extends Base {
 		return false;
 	}
 }
-

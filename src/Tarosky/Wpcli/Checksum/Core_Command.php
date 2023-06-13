@@ -1,14 +1,16 @@
 <?php
 
+namespace Tarosky\Wpcli\Checksum;
+
+use Exception;
+use WP_CLI;
 use WP_CLI\Utils;
 use WP_CLI\WpOrgApi;
 
 /**
  * Verifies core file integrity by comparing to published checksums.
- *
- * @package wp-cli
  */
-class Checksum_Core_Command extends Checksum_Base_Command {
+class Core_Command extends Command {
 
 	/**
 	 * Whether or not to verify contents of the root directory.

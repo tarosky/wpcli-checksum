@@ -1,13 +1,19 @@
 <?php
 
+namespace Tarosky\Wpcli\Checksum;
+
+use Exception;
+use RecursiveCallbackFilterIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use WP_CLI;
+use WP_CLI_Command;
 use WP_CLI\Utils;
 
 /**
  * Base command that all checksum commands rely on.
- *
- * @package wp-cli
  */
-class Checksum_Base_Command extends WP_CLI_Command {
+class Command extends WP_CLI_Command {
 
 	/**
 	 * Normalizes directory separators to slashes.

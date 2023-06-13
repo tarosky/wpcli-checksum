@@ -1,16 +1,18 @@
 <?php
 
-use WP_CLI\Fetchers;
+namespace Tarosky\Wpcli\Checksum;
+
+use Exception;
+use Tarosky\Wpcli\Checksum\Fetchers\UnfilteredPlugin;
+use WP_CLI;
 use WP_CLI\Formatter;
 use WP_CLI\Utils;
 use WP_CLI\WpOrgApi;
 
 /**
  * Verifies plugin file integrity by comparing to published checksums.
- *
- * @package wp-cli
  */
-class Checksum_Plugin_Command extends Checksum_Base_Command {
+class Plugins_Command extends Command {
 
 	/**
 	 * URL template that points to the API endpoint to use.
@@ -78,7 +80,7 @@ class Checksum_Plugin_Command extends Checksum_Base_Command {
 	 */
 	public function __invoke( $args, $assoc_args ) {
 
-		$fetcher     = new Fetchers\UnfilteredPlugin();
+		$fetcher     = new UnfilteredPlugin();
 		$all         = (bool) Utils\get_flag_value( $assoc_args, 'all', false );
 		$strict      = (bool) Utils\get_flag_value( $assoc_args, 'strict', false );
 		$insecure    = (bool) Utils\get_flag_value( $assoc_args, 'insecure', false );

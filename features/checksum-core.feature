@@ -7,7 +7,7 @@ Feature: Validate checksums for WordPress install
     When I run `wp core update`
     Then STDOUT should not be empty
 
-    When I run `wp core verify-checksums`
+    When I run `wp tarosky checksum core`
     Then STDOUT should be:
       """
       Success: WordPress installation verifies against checksums.
@@ -17,7 +17,7 @@ Feature: Validate checksums for WordPress install
     Given a WP install
     And "WordPress" replaced with "Wordpress" in the readme.html file
 
-    When I try `wp core verify-checksums`
+    When I try `wp tarosky checksum core`
     Then STDERR should be:
       """
       Warning: File doesn't verify against checksum: readme.html
@@ -27,7 +27,7 @@ Feature: Validate checksums for WordPress install
     When I run `rm readme.html`
     Then STDERR should be empty
 
-    When I try `wp core verify-checksums`
+    When I try `wp tarosky checksum core`
     Then STDERR should be:
       """
       Warning: File doesn't exist: readme.html
@@ -40,10 +40,10 @@ Feature: Validate checksums for WordPress install
     And a wp-cli.yml file:
       """
       plugin install:
-        - user-switching
+      - user-switching
       """
 
-    When I try `wp core verify-checksums`
+    When I try `wp tarosky checksum core`
     Then STDERR should be:
       """
       Warning: File should not exist: wp-cli.yml
@@ -57,7 +57,7 @@ Feature: Validate checksums for WordPress install
     When I run `rm wp-cli.yml`
     Then STDERR should be empty
 
-    When I run `wp core verify-checksums`
+    When I run `wp tarosky checksum core`
     Then STDERR should be empty
     And STDOUT should be:
       """
@@ -69,19 +69,19 @@ Feature: Validate checksums for WordPress install
     Given an empty directory
     And I run `wp core download --version=4.3`
 
-    When I run `wp core verify-checksums`
+    When I run `wp tarosky checksum core`
     Then STDOUT should be:
       """
       Success: WordPress installation verifies against checksums.
       """
 
-    When I run `wp core verify-checksums --version=4.3 --locale=en_US`
+    When I run `wp tarosky checksum core --version=4.3 --locale=en_US`
     Then STDOUT should be:
       """
       Success: WordPress installation verifies against checksums.
       """
 
-    When I try `wp core verify-checksums --version=4.2 --locale=en_US`
+    When I try `wp tarosky checksum core --version=4.2 --locale=en_US`
     Then STDERR should contain:
       """
       Error: WordPress installation doesn't verify against checksums.
@@ -96,7 +96,7 @@ Feature: Validate checksums for WordPress install
       """
     And the return code should be 0
 
-    When I run `wp core verify-checksums`
+    When I run `wp tarosky checksum core`
     Then STDOUT should be:
       """
       Success: WordPress installation verifies against checksums.
@@ -116,7 +116,7 @@ Feature: Validate checksums for WordPress install
       """
     Then the wp-includes/extra-file.txt file should exist
 
-    When I try `wp core verify-checksums`
+    When I try `wp tarosky checksum core`
     Then STDERR should be:
       """
       Warning: File should not exist: wp-includes/extra-file.txt
@@ -134,7 +134,7 @@ Feature: Validate checksums for WordPress install
       hello world
       """
 
-    When I try `wp core verify-checksums`
+    When I try `wp tarosky checksum core`
     Then STDERR should be:
       """
       Warning: File should not exist: wp-extra-file.php
@@ -164,7 +164,7 @@ Feature: Validate checksums for WordPress install
       foobar
       """
 
-    When I try `wp core verify-checksums --include-root`
+    When I try `wp tarosky checksum core --include-root`
     Then STDERR should contain:
       """
       Warning: File should not exist: unknown-folder/unknown-file.php
@@ -187,7 +187,7 @@ Feature: Validate checksums for WordPress install
       """
     And the return code should be 0
 
-    When I run `wp core verify-checksums`
+    When I run `wp tarosky checksum core`
     Then STDERR should not contain:
       """
       Warning: File should not exist: unknown-folder/unknown-file.php
@@ -213,7 +213,7 @@ Feature: Validate checksums for WordPress install
       hello world
       """
 
-    When I run `wp core verify-checksums`
+    When I run `wp tarosky checksum core`
     Then STDOUT should be:
       """
       Success: WordPress installation verifies against checksums.

@@ -7,20 +7,20 @@ Feature: Validate checksums for WordPress plugins
     Then STDOUT should not be empty
     And STDERR should be empty
 
-    When I run `wp plugin verify-checksums duplicate-post`
+    When I run `wp tarosky checksum plugins duplicate-post`
     Then STDOUT should be:
       """
       Success: Verified 1 of 1 plugins.
       """
 
-    When I run `wp plugin verify-checksums duplicate-post --format=json --version=3.2.1`
+    When I run `wp tarosky checksum plugins duplicate-post --format=json --version=3.2.1`
     Then STDOUT should be:
       """
       Success: Verified 1 of 1 plugins.
       """
     And STDERR should be empty
 
-    When I try `wp plugin verify-checksums duplicate-post --format=json --version=3.2.2`
+    When I try `wp tarosky checksum plugins duplicate-post --format=json --version=3.2.2`
     Then the return code should be 1
     And STDOUT should contain:
       """
@@ -40,7 +40,7 @@ Feature: Validate checksums for WordPress plugins
 
     Given "Duplicate Post" replaced with "Different Name" in the wp-content/plugins/duplicate-post/duplicate-post.php file
 
-    When I try `wp plugin verify-checksums duplicate-post --format=json`
+    When I try `wp tarosky checksum plugins duplicate-post --format=json`
     Then STDOUT should contain:
       """
       "plugin_name":"duplicate-post","file":"duplicate-post.php","message":"Checksum does not match"
@@ -53,7 +53,7 @@ Feature: Validate checksums for WordPress plugins
     When I run `rm wp-content/plugins/duplicate-post/duplicate-post.css`
     Then STDERR should be empty
 
-    When I try `wp plugin verify-checksums duplicate-post --format=json`
+    When I try `wp tarosky checksum plugins duplicate-post --format=json`
     Then STDOUT should contain:
       """
       "plugin_name":"duplicate-post","file":"duplicate-post.css","message":"File is missing"
@@ -66,7 +66,7 @@ Feature: Validate checksums for WordPress plugins
     When I run `touch wp-content/plugins/duplicate-post/additional-file.php`
     Then STDERR should be empty
 
-    When I try `wp plugin verify-checksums duplicate-post --format=json`
+    When I try `wp tarosky checksum plugins duplicate-post --format=json`
     Then STDOUT should contain:
       """
       "plugin_name":"duplicate-post","file":"additional-file.php","message":"File was added"
@@ -85,14 +85,14 @@ Feature: Validate checksums for WordPress plugins
 
     Given "Release Notes" replaced with "Different Name" in the wp-content/plugins/release-notes/readme.txt file
 
-    When I run `wp plugin verify-checksums release-notes`
+    When I run `wp tarosky checksum plugins release-notes`
     Then STDOUT should be:
       """
       Success: Verified 1 of 1 plugins.
       """
     And STDERR should be empty
 
-    When I try `wp plugin verify-checksums release-notes --strict`
+    When I try `wp tarosky checksum plugins release-notes --strict`
     Then STDOUT should not be empty
     And STDERR should contain:
       """
@@ -101,14 +101,14 @@ Feature: Validate checksums for WordPress plugins
 
     Given "Release Notes" replaced with "Different Name" in the wp-content/plugins/release-notes/README.md file
 
-    When I run `wp plugin verify-checksums release-notes`
+    When I run `wp tarosky checksum plugins release-notes`
     Then STDOUT should be:
       """
       Success: Verified 1 of 1 plugins.
       """
     And STDERR should be empty
 
-    When I try `wp plugin verify-checksums release-notes --strict`
+    When I try `wp tarosky checksum plugins release-notes --strict`
     Then STDOUT should not be empty
     And STDERR should contain:
       """
@@ -124,7 +124,7 @@ Feature: Validate checksums for WordPress plugins
     Then STDOUT should not be empty
     And STDERR should be empty
 
-    When I run `wp plugin verify-checksums wptouch`
+    When I run `wp tarosky checksum plugins wptouch`
     Then STDOUT should be:
       """
       Success: Verified 1 of 1 plugins.
@@ -134,7 +134,7 @@ Feature: Validate checksums for WordPress plugins
   Scenario: Throws an error if provided with neither plugin names nor the --all flag
     Given a WP install
 
-    When I try `wp plugin verify-checksums`
+    When I try `wp tarosky checksum plugins`
     Then STDERR should contain:
       """
       You need to specify either one or more plugin slugs to check or use the --all flag to check all plugins.
@@ -159,7 +159,7 @@ Feature: Validate checksums for WordPress plugins
           unset( $all_plugins['duplicate-post/duplicate-post.php'] );
           return $all_plugins;
        } );
-       """
+      """
     And "Duplicate Post" replaced with "Different Name" in the wp-content/plugins/duplicate-post/duplicate-post.php file
 
     When I run `wp plugin list --fields=name`
@@ -168,7 +168,7 @@ Feature: Validate checksums for WordPress plugins
       duplicate-post
       """
 
-    When I try `wp plugin verify-checksums --all --format=json`
+    When I try `wp tarosky checksum plugins --all --format=json`
     Then STDOUT should contain:
       """
       "plugin_name":"duplicate-post","file":"duplicate-post.php","message":"Checksum does not match"
