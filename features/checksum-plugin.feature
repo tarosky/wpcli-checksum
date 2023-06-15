@@ -8,28 +8,27 @@ Feature: Validate checksums for WordPress plugins
     And STDERR should be empty
 
     When I run `wp tarosky checksum plugins duplicate-post`
-    Then STDOUT should be:
+    Then the return code should be 0
+    And STDOUT should be:
       """
-      Success: Verified 1 of 1 plugins.
-      """
-
-    When I run `wp tarosky checksum plugins duplicate-post --format=json --version=3.2.1`
-    Then STDOUT should be:
-      """
-      Success: Verified 1 of 1 plugins.
+      [{"name":"duplicate-post","verified":true}]
       """
     And STDERR should be empty
 
-    When I try `wp tarosky checksum plugins duplicate-post --format=json --version=3.2.2`
+    When I run `wp tarosky checksum plugins duplicate-post --version=3.2.1`
+    Then STDOUT should be:
+      """
+      [{"name":"duplicate-post","verified":true}]
+      """
+    And STDERR should be empty
+
+    When I try `wp tarosky checksum plugins duplicate-post --version=3.2.2`
     Then the return code should be 1
-    And STDOUT should contain:
+    And STDOUT should be:
       """
-      "plugin_name":"duplicate-post","file":"duplicate-post-jetpack.php","message":"File is missing"
+      [{"name":"duplicate-post","verified":false,"missing":["duplicate-post-jetpack.php","duplicate-post-wpml.php"],"mismatch":["duplicate-post.css","duplicate-post-options.php","duplicate-post-common.php","duplicate-post.php","duplicate-post-admin.php"]}]
       """
-    And STDERR should be:
-      """
-      Error: No plugins verified (1 failed).
-      """
+    And STDERR should be empty
 
   Scenario: Modified plugin doesn't verify
     Given a WP install
@@ -40,40 +39,28 @@ Feature: Validate checksums for WordPress plugins
 
     Given "Duplicate Post" replaced with "Different Name" in the wp-content/plugins/duplicate-post/duplicate-post.php file
 
-    When I try `wp tarosky checksum plugins duplicate-post --format=json`
-    Then STDOUT should contain:
+    When I try `wp tarosky checksum plugins duplicate-post`
+    Then STDOUT should be:
       """
-      "plugin_name":"duplicate-post","file":"duplicate-post.php","message":"Checksum does not match"
-      """
-    And STDERR should be:
-      """
-      Error: No plugins verified (1 failed).
+      [{"name":"duplicate-post","verified":false,"mismatch":["duplicate-post.php"]}]
       """
 
     When I run `rm wp-content/plugins/duplicate-post/duplicate-post.css`
     Then STDERR should be empty
 
-    When I try `wp tarosky checksum plugins duplicate-post --format=json`
-    Then STDOUT should contain:
+    When I try `wp tarosky checksum plugins duplicate-post`
+    Then STDOUT should be:
       """
-      "plugin_name":"duplicate-post","file":"duplicate-post.css","message":"File is missing"
-      """
-    And STDERR should be:
-      """
-      Error: No plugins verified (1 failed).
+      [{"name":"duplicate-post","verified":false,"missing":["duplicate-post.css"],"mismatch":["duplicate-post.php"]}]
       """
 
     When I run `touch wp-content/plugins/duplicate-post/additional-file.php`
     Then STDERR should be empty
 
-    When I try `wp tarosky checksum plugins duplicate-post --format=json`
-    Then STDOUT should contain:
+    When I try `wp tarosky checksum plugins duplicate-post`
+    Then STDOUT should be:
       """
-      "plugin_name":"duplicate-post","file":"additional-file.php","message":"File was added"
-      """
-    And STDERR should be:
-      """
-      Error: No plugins verified (1 failed).
+      [{"name":"duplicate-post","verified":false,"missing":["duplicate-post.css"],"added":["additional-file.php"],"mismatch":["duplicate-post.php"]}]
       """
 
   Scenario: Soft changes are only reported in strict mode
@@ -88,15 +75,13 @@ Feature: Validate checksums for WordPress plugins
     When I run `wp tarosky checksum plugins release-notes`
     Then STDOUT should be:
       """
-      Success: Verified 1 of 1 plugins.
+      [{"name":"release-notes","verified":true}]
       """
-    And STDERR should be empty
 
     When I try `wp tarosky checksum plugins release-notes --strict`
-    Then STDOUT should not be empty
-    And STDERR should contain:
+    Then STDOUT should be:
       """
-      Error: No plugins verified (1 failed).
+      [{"name":"release-notes","verified":false,"mismatch":["readme.txt"]}]
       """
 
     Given "Release Notes" replaced with "Different Name" in the wp-content/plugins/release-notes/README.md file
@@ -104,15 +89,13 @@ Feature: Validate checksums for WordPress plugins
     When I run `wp tarosky checksum plugins release-notes`
     Then STDOUT should be:
       """
-      Success: Verified 1 of 1 plugins.
+      [{"name":"release-notes","verified":true}]
       """
-    And STDERR should be empty
 
     When I try `wp tarosky checksum plugins release-notes --strict`
-    Then STDOUT should not be empty
-    And STDERR should contain:
+    Then STDOUT should be:
       """
-      Error: No plugins verified (1 failed).
+      [{"name":"release-notes","verified":false,"mismatch":["readme.txt","README.md"]}]
       """
 
   # WPTouch 4.3.22 contains multiple checksums for some of its files.
@@ -127,9 +110,8 @@ Feature: Validate checksums for WordPress plugins
     When I run `wp tarosky checksum plugins wptouch`
     Then STDOUT should be:
       """
-      Success: Verified 1 of 1 plugins.
+      [{"name":"wptouch","verified":true}]
       """
-    And STDERR should be empty
 
   Scenario: Throws an error if provided with neither plugin names nor the --all flag
     Given a WP install
@@ -140,6 +122,7 @@ Feature: Validate checksums for WordPress plugins
       You need to specify either one or more plugin slugs to check or use the --all flag to check all plugins.
       """
     And STDOUT should be empty
+    And the return code should be 1
 
   Scenario: Ensure a plugin cannot filter itself out of the checks
     Given a WP install
@@ -168,8 +151,8 @@ Feature: Validate checksums for WordPress plugins
       duplicate-post
       """
 
-    When I try `wp tarosky checksum plugins --all --format=json`
+    When I try `wp tarosky checksum plugins --all`
     Then STDOUT should contain:
       """
-      "plugin_name":"duplicate-post","file":"duplicate-post.php","message":"Checksum does not match"
+      {"name":"duplicate-post","verified":false,"mismatch":["duplicate-post.php"]}
       """

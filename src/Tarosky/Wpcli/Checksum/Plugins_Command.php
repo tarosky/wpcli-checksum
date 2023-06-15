@@ -5,7 +5,6 @@ namespace Tarosky\Wpcli\Checksum;
 use Exception;
 use Tarosky\Wpcli\Checksum\Fetchers\UnfilteredPlugin;
 use WP_CLI;
-use WP_CLI\Formatter;
 use WP_CLI\Utils;
 use WP_CLI\WpOrgApi;
 
@@ -15,28 +14,16 @@ use WP_CLI\WpOrgApi;
 class Plugins_Command extends Command {
 
 	/**
-	 * URL template that points to the API endpoint to use.
-	 *
-	 * @var string
-	 */
-	private $url_template = 'https://downloads.wordpress.org/plugin-checksums/{slug}/{version}.json';
-
-	/**
 	 * Cached plugin data for all installed plugins.
 	 *
 	 * @var array|null
 	 */
 	private $plugins_data;
 
-	/**
-	 * Array of detected errors.
-	 *
-	 * @var array
-	 */
-	private $errors = array();
+	const MAX_ERROR_FILES = 20;
 
 	/**
-	 * Verifies plugin files against WordPress.org's checksums.
+	 * Verifies plugin files against WordPress.org's checksums and return the result as JSON.
 	 *
 	 * ## OPTIONS
 	 *
@@ -53,18 +40,6 @@ class Plugins_Command extends Command {
 	 * [--version=<version>]
 	 * : Verify checksums against a specific plugin version.
 	 *
-	 * [--format=<format>]
-	 * : Render output in a specific format.
-	 * ---
-	 * default: table
-	 * options:
-	 *   - table
-	 *   - json
-	 *   - csv
-	 *   - yaml
-	 *   - count
-	 * ---
-	 *
 	 * [--insecure]
 	 * : Retry downloads without certificate validation if TLS handshake fails. Note: This makes the request vulnerable to a MITM attack.
 	 *
@@ -79,103 +54,97 @@ class Plugins_Command extends Command {
 	 *     Success: Verified 1 of 1 plugins.
 	 */
 	public function __invoke( $args, $assoc_args ) {
+		$result = [];
 
 		$fetcher     = new UnfilteredPlugin();
 		$all         = (bool) Utils\get_flag_value( $assoc_args, 'all', false );
 		$strict      = (bool) Utils\get_flag_value( $assoc_args, 'strict', false );
 		$insecure    = (bool) Utils\get_flag_value( $assoc_args, 'insecure', false );
-		$plugins     = $fetcher->get_many( $all ? $this->get_all_plugin_names() : $args );
+		$plugins     = $fetcher->get_many( $all ? self::get_all_plugin_names() : $args );
 		$version_arg = isset( $assoc_args['version'] ) ? $assoc_args['version'] : '';
 
 		if ( empty( $plugins ) && ! $all ) {
 			WP_CLI::error( 'You need to specify either one or more plugin slugs to check or use the --all flag to check all plugins.' );
 		}
 
-		$skips = 0;
+		$succeeded = true;
 
 		foreach ( $plugins as $plugin ) {
-			$version = empty( $version_arg ) ? $this->get_plugin_version( $plugin->file ) : $version_arg;
-
-			if ( false === $version ) {
-				WP_CLI::warning( "Could not retrieve the version for plugin {$plugin->name}, skipping." );
-				$skips++;
-				continue;
-			}
-
-			$wp_org_api = new WpOrgApi( [ 'insecure' => $insecure ] );
-
-			try {
-				$checksums = $wp_org_api->get_plugin_checksums( $plugin->name, $version );
-			} catch ( Exception $exception ) {
-				WP_CLI::warning( $exception->getMessage() );
-				$checksums = false;
-			}
-
-			if ( false === $checksums ) {
-				WP_CLI::warning( "Could not retrieve the checksums for version {$version} of plugin {$plugin->name}, skipping." );
-				$skips++;
-				continue;
-			}
-
-			$files = $this->get_plugin_files( $plugin->file );
-
-			foreach ( $checksums as $file => $checksum_array ) {
-				if ( ! in_array( $file, $files, true ) ) {
-					$this->add_error( $plugin->name, $file, 'File is missing' );
-				}
-			}
-
-			foreach ( $files as $file ) {
-				if ( ! array_key_exists( $file, $checksums ) ) {
-					$this->add_error( $plugin->name, $file, 'File was added' );
-					continue;
-				}
-
-				if ( ! $strict && $this->is_soft_change_file( $file ) ) {
-					continue;
-				}
-
-				$result = $this->check_file_checksum( dirname( $plugin->file ) . '/' . $file, $checksums[ $file ] );
-				if ( true !== $result ) {
-					$this->add_error( $plugin->name, $file, is_string( $result ) ? $result : 'Checksum does not match' );
-				}
-			}
+			$res       = $this->verify_plugin( $plugin, $version_arg, $insecure, $strict );
+			$result[]  = $res;
+			$succeeded = $succeeded && $res['verified'];
 		}
 
-		if ( ! empty( $this->errors ) ) {
-			$formatter = new Formatter(
-				$assoc_args,
-				array( 'plugin_name', 'file', 'message' )
-			);
-			$formatter->display_items( $this->errors );
+		echo json_encode( $result );
+		if ( ! $succeeded ) {
+			exit( 1 );
 		}
-
-		$total     = count( $plugins );
-		$failures  = count( array_unique( array_column( $this->errors, 'plugin_name' ) ) );
-		$successes = $total - $failures - $skips;
-
-		Utils\report_batch_operation_results(
-			'plugin',
-			'verify',
-			$total,
-			$successes,
-			$failures,
-			$skips
-		);
 	}
 
-	/**
-	 * Adds a new error to the array of detected errors.
-	 *
-	 * @param string $plugin_name Name of the plugin that had the error.
-	 * @param string $file Relative path to the file that had the error.
-	 * @param string $message Message explaining the error.
-	 */
-	private function add_error( $plugin_name, $file, $message ) {
-		$error['plugin_name'] = $plugin_name;
-		$error['file']        = $file;
-		$error['message']     = $message;
-		$this->errors[]       = $error;
+	private function verify_plugin( $plugin, $version_arg, $insecure, $strict ) {
+		$result = [
+			'name'     => $plugin->name,
+			'verified' => true,
+		];
+
+		$version = empty( $version_arg ) ? $this->get_plugin_version( $plugin->file ) : $version_arg;
+
+		if ( false === $version ) {
+			$result['verified'] = false;
+			$result['reason']   = 'plugin_version_not_found';
+			return $result;
+		}
+
+		$wp_org_api = new WpOrgApi( [ 'insecure' => $insecure ] );
+
+		try {
+			$checksums = $wp_org_api->get_plugin_checksums( $plugin->name, $version );
+		} catch ( Exception $exception ) {
+			$result['message'] = $exception->getMessage();
+			$checksums         = false;
+		}
+
+		if ( false === $checksums ) {
+			$result['verified'] = false;
+			$result['reason']   = 'plugin_checksum_not_found';
+			return $result;
+		}
+
+		$files = $this->get_plugin_files( $plugin->file );
+
+		foreach ( $checksums as $file => $checksum_array ) {
+			if ( ! in_array( $file, $files, true ) ) {
+				self::add_error_file( $result, 'missing', $file );
+			}
+		}
+
+		foreach ( $files as $file ) {
+			if ( ! array_key_exists( $file, $checksums ) ) {
+				self::add_error_file( $result, 'added', $file );
+				continue;
+			}
+
+			if ( ! $strict && self::is_soft_change_file( $file ) ) {
+				continue;
+			}
+
+			$matched = self::check_file_checksum( dirname( $plugin->file ) . '/' . $file, $checksums[ $file ] );
+			if ( false === $matched ) {
+				self::add_error_file( $result, 'mismatch', $file );
+			} elseif ( null === $matched ) {
+				self::add_error_file( $result, 'noalgorithm', $file );
+			}
+		}
+
+		return $result;
+	}
+
+	private static function add_error_file( &$result, $group, $file ) {
+		$result['verified'] = false;
+		if ( array_key_exists( $group, $result ) && self::MAX_ERROR_FILES <= count( $result[ $group ] ) ) {
+			return;
+		}
+		$result[ $group ][] = $file;
 	}
 
 	/**
@@ -203,7 +172,7 @@ class Plugins_Command extends Command {
 	 *
 	 * @return array<string> Names of all installed plugins.
 	 */
-	private function get_all_plugin_names() {
+	private static function get_all_plugin_names() {
 		$names = array();
 		foreach ( get_plugins() as $file => $details ) {
 			$names[] = Utils\get_plugin_name( $file );
@@ -220,7 +189,7 @@ class Plugins_Command extends Command {
 	 * @return array<string> Array of files with their relative paths.
 	 */
 	private function get_plugin_files( $path ) {
-		$folder = dirname( $this->get_absolute_path( $path ) );
+		$folder = dirname( self::get_absolute_path( $path ) );
 
 		// Return single file plugins immediately, to avoid iterating over the
 		// entire plugins folder.
@@ -239,60 +208,20 @@ class Plugins_Command extends Command {
 	 *                          integrity of.
 	 * @param array  $checksums Array of provided checksums to compare against.
 	 *
-	 * @return true|string
+	 * @return bool|null
 	 */
-	private function check_file_checksum( $path, $checksums ) {
-		if ( $this->supports_sha256()
-			&& array_key_exists( 'sha256', $checksums )
-		) {
-			$sha256 = $this->get_sha256( $this->get_absolute_path( $path ) );
-
+	private static function check_file_checksum( $path, $checksums ) {
+		if ( array_key_exists( 'sha256', $checksums ) ) {
+			$sha256 = hash_file( 'sha256', self::get_absolute_path( $path ) );
 			return in_array( $sha256, (array) $checksums['sha256'], true );
 		}
 
-		if ( ! array_key_exists( 'md5', $checksums ) ) {
-			return 'No matching checksum algorithm found';
+		if ( array_key_exists( 'md5', $checksums ) ) {
+			$md5 = hash_file( 'md5', self::get_absolute_path( $path ) );
+			return in_array( $md5, (array) $checksums['md5'], true );
 		}
 
-		$md5 = $this->get_md5( $this->get_absolute_path( $path ) );
-
-		return in_array( $md5, (array) $checksums['md5'], true );
-	}
-
-	/**
-	 * Checks whether the current environment supports 256-bit SHA-2.
-	 *
-	 * Should be supported for PHP 5+, but we might find edge cases depending on
-	 * host.
-	 *
-	 * @return bool
-	 */
-	private function supports_sha256() {
-		return true;
-	}
-
-	/**
-	 * Gets the 256-bit SHA-2 of a given file.
-	 *
-	 * @param string $filepath Absolute path to the file to calculate the SHA-2
-	 *                         for.
-	 *
-	 * @return string
-	 */
-	private function get_sha256( $filepath ) {
-		return hash_file( 'sha256', $filepath );
-	}
-
-	/**
-	 * Gets the MD5 of a given file.
-	 *
-	 * @param string $filepath Absolute path to the file to calculate the MD5
-	 *                         for.
-	 *
-	 * @return string
-	 */
-	private function get_md5( $filepath ) {
-		return hash_file( 'md5', $filepath );
+		return null;
 	}
 
 	/**
@@ -302,7 +231,7 @@ class Plugins_Command extends Command {
 	 *
 	 * @return string
 	 */
-	private function get_absolute_path( $path ) {
+	private static function get_absolute_path( $path ) {
 		return WP_PLUGIN_DIR . '/' . $path;
 	}
 
@@ -311,7 +240,7 @@ class Plugins_Command extends Command {
 	 *
 	 * @return array<string> Array of file names.
 	 */
-	private function get_soft_change_files() {
+	private static function get_soft_change_files() {
 		static $files = array(
 			'readme.txt',
 			'readme.md',
@@ -329,7 +258,7 @@ class Plugins_Command extends Command {
 	 * @return bool Whether the file only triggers checksum errors in strict
 	 * mode.
 	 */
-	private function is_soft_change_file( $file ) {
-		return in_array( strtolower( $file ), $this->get_soft_change_files(), true );
+	private static function is_soft_change_file( $file ) {
+		return in_array( strtolower( $file ), self::get_soft_change_files(), true );
 	}
 }

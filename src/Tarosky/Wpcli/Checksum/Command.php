@@ -27,28 +27,6 @@ class Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Read a remote file and return its contents.
-	 *
-	 * @param string $url URL of the remote file to read.
-	 *
-	 * @return mixed
-	 */
-	protected static function _read( $url ) { // phpcs:ignore PSR2.Methods.MethodDeclaration.Underscore -- Could be used in classes extending this class.
-		$headers  = array( 'Accept' => 'application/json' );
-		$response = Utils\http_request(
-			'GET',
-			$url,
-			null,
-			$headers,
-			array( 'timeout' => 30 )
-		);
-		if ( 200 === $response->status_code ) {
-			return $response->body;
-		}
-		WP_CLI::error( "Couldn't fetch response from {$url} (HTTP code {$response->status_code})." );
-	}
-
-	/**
 	 * Recursively get the list of files for a given path.
 	 *
 	 * @param string $path Root path to start the recursive traversal in.
