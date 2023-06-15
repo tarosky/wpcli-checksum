@@ -2,18 +2,17 @@
 
 namespace Tarosky\Wpcli\Checksum;
 
-use Exception;
 use RecursiveCallbackFilterIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use WP_CLI;
 use WP_CLI_Command;
-use WP_CLI\Utils;
 
 /**
  * Base command that all checksum commands rely on.
  */
 class Command extends WP_CLI_Command {
+
+	const MAX_ERROR_FILES = 20;
 
 	/**
 	 * Normalizes directory separators to slashes.
@@ -35,26 +34,23 @@ class Command extends WP_CLI_Command {
 	 */
 	protected function get_files( $path ) {
 		$filtered_files = array();
-		try {
-			$files = new RecursiveIteratorIterator(
-				new RecursiveCallbackFilterIterator(
-					new RecursiveDirectoryIterator(
-						$path,
-						RecursiveDirectoryIterator::SKIP_DOTS
-					),
-					function ( $current, $key, $iterator ) use ( $path ) {
-						return $this->filter_file( self::normalize_directory_separators( substr( $current->getPathname(), strlen( $path ) ) ) );
-					}
+
+		$files = new RecursiveIteratorIterator(
+			new RecursiveCallbackFilterIterator(
+				new RecursiveDirectoryIterator(
+					$path,
+					RecursiveDirectoryIterator::SKIP_DOTS
 				),
-				RecursiveIteratorIterator::CHILD_FIRST
-			);
-			foreach ( $files as $file_info ) {
-				if ( $file_info->isFile() ) {
-					$filtered_files[] = self::normalize_directory_separators( substr( $file_info->getPathname(), strlen( $path ) ) );
+				function ( $current, $key, $iterator ) use ( $path ) {
+					return $this->filter_file( self::normalize_directory_separators( substr( $current->getPathname(), strlen( $path ) ) ) );
 				}
+			),
+			RecursiveIteratorIterator::CHILD_FIRST
+		);
+		foreach ( $files as $file_info ) {
+			if ( $file_info->isFile() ) {
+				$filtered_files[] = self::normalize_directory_separators( substr( $file_info->getPathname(), strlen( $path ) ) );
 			}
-		} catch ( Exception $e ) {
-			WP_CLI::error( $e->getMessage() );
 		}
 
 		return $filtered_files;
@@ -71,5 +67,13 @@ class Command extends WP_CLI_Command {
 	 */
 	protected function filter_file( $filepath ) {
 		return true;
+	}
+
+	protected static function add_error_file( &$result, $group, $file ) {
+		$result['verified'] = false;
+		if ( array_key_exists( $group, $result ) && self::MAX_ERROR_FILES <= count( $result[ $group ] ) ) {
+			return;
+		}
+		$result[ $group ][] = $file;
 	}
 }

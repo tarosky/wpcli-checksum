@@ -20,8 +20,6 @@ class Plugins_Command extends Command {
 	 */
 	private $plugins_data;
 
-	const MAX_ERROR_FILES = 20;
-
 	/**
 	 * Verifies plugin files against WordPress.org's checksums and return the result as JSON.
 	 *
@@ -46,12 +44,12 @@ class Plugins_Command extends Command {
 	 * ## EXAMPLES
 	 *
 	 *     # Verify the checksums of all installed plugins
-	 *     $ wp plugin verify-checksums --all
-	 *     Success: Verified 8 of 8 plugins.
+	 *     $ wp tarosky checksum plugins --all
+	 *     [{"name":"akismet","verified":true},{"name":"classic-editor","verified":true},{"name":"hello-dolly","verified":true}]
 	 *
 	 *     # Verify the checksums of a single plugin, Akismet in this case
-	 *     $ wp plugin verify-checksums akismet
-	 *     Success: Verified 1 of 1 plugins.
+	 *     $ wp tarosky checksum plugins akismet
+	 *     [{"name":"akismet","verified":true}]
 	 */
 	public function __invoke( $args, $assoc_args ) {
 		$result = [];
@@ -137,14 +135,6 @@ class Plugins_Command extends Command {
 		}
 
 		return $result;
-	}
-
-	private static function add_error_file( &$result, $group, $file ) {
-		$result['verified'] = false;
-		if ( array_key_exists( $group, $result ) && self::MAX_ERROR_FILES <= count( $result[ $group ] ) ) {
-			return;
-		}
-		$result[ $group ][] = $file;
 	}
 
 	/**

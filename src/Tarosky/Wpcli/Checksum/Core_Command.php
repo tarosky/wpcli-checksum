@@ -20,7 +20,7 @@ class Core_Command extends Command {
 	private $include_root = false;
 
 	/**
-	 * Verifies WordPress files against WordPress.org's checksums.
+	 * Verifies WordPress files against WordPress.org's checksums and return the result as JSON.
 	 *
 	 * Downloads md5 checksums for the current version from WordPress.org, and
 	 * compares those checksums against the currently installed files.
@@ -49,23 +49,20 @@ class Core_Command extends Command {
 	 * ## EXAMPLES
 	 *
 	 *     # Verify checksums
-	 *     $ wp core verify-checksums
-	 *     Success: WordPress installation verifies against checksums.
+	 *     $ wp tarosky checksum core
+	 *     {"verified":true}
 	 *
 	 *     # Verify checksums for given WordPress version
-	 *     $ wp core verify-checksums --version=4.0
-	 *     Success: WordPress installation verifies against checksums.
+	 *     $ wp tarosky checksum core --version=4.0
+	 *     {"verified":true}
 	 *
 	 *     # Verify checksums for given locale
-	 *     $ wp core verify-checksums --locale=en_US
-	 *     Success: WordPress installation verifies against checksums.
+	 *     $ wp tarosky checksum core --locale=en_US
+	 *     {"verified":true}
 	 *
 	 *     # Verify checksums for given locale
-	 *     $ wp core verify-checksums --locale=ja
-	 *     Warning: File doesn't verify against checksum: wp-includes/version.php
-	 *     Warning: File doesn't verify against checksum: readme.html
-	 *     Warning: File doesn't verify against checksum: wp-config-sample.php
-	 *     Error: WordPress installation doesn't verify against checksums.
+	 *     $ wp tarosky checksum core --locale=ja
+	 *     {"verified":false,"mismatch":["wp-includes/version.php","readme.html","wp-config-sample.php"]}
 	 *
 	 * @when before_wp_load
 	 */
@@ -107,7 +104,7 @@ class Core_Command extends Command {
 			WP_CLI::error( "Couldn't get checksums from WordPress.org." );
 		}
 
-		$has_errors = false;
+		$result = [ 'verified' => true ];
 		foreach ( $checksums as $file => $checksum ) {
 			// Skip files which get updated
 			if ( 'wp-content' === substr( $file, 0, 10 ) ) {
@@ -115,15 +112,13 @@ class Core_Command extends Command {
 			}
 
 			if ( ! file_exists( ABSPATH . $file ) ) {
-				WP_CLI::warning( "File doesn't exist: {$file}" );
-				$has_errors = true;
+				self::add_error_file( $result, 'missing', $file );
 				continue;
 			}
 
 			$md5_file = md5_file( ABSPATH . $file );
 			if ( $md5_file !== $checksum ) {
-				WP_CLI::warning( "File doesn't verify against checksum: {$file}" );
-				$has_errors = true;
+				self::add_error_file( $result, 'mismatch', $file );
 			}
 		}
 
@@ -133,14 +128,13 @@ class Core_Command extends Command {
 
 		if ( ! empty( $additional_files ) ) {
 			foreach ( $additional_files as $additional_file ) {
-				WP_CLI::warning( "File should not exist: {$additional_file}" );
+				self::add_error_file( $result, 'added', $additional_file );
 			}
 		}
 
-		if ( ! $has_errors ) {
-			WP_CLI::success( 'WordPress installation verifies against checksums.' );
-		} else {
-			WP_CLI::error( "WordPress installation doesn't verify against checksums." );
+		echo json_encode( $result );
+		if ( ! $result['verified'] ) {
+			exit( 1 );
 		}
 	}
 
