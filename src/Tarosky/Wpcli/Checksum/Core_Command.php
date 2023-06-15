@@ -1,14 +1,16 @@
 <?php
 
+namespace Tarosky\Wpcli\Checksum;
+
+use Exception;
+use WP_CLI;
 use WP_CLI\Utils;
 use WP_CLI\WpOrgApi;
 
 /**
  * Verifies core file integrity by comparing to published checksums.
- *
- * @package wp-cli
  */
-class Checksum_Core_Command extends Checksum_Base_Command {
+class Core_Command extends Command {
 
 	/**
 	 * Whether or not to verify contents of the root directory.
@@ -18,7 +20,7 @@ class Checksum_Core_Command extends Checksum_Base_Command {
 	private $include_root = false;
 
 	/**
-	 * Verifies WordPress files against WordPress.org's checksums.
+	 * Verifies WordPress files against WordPress.org's checksums and return the result as JSON.
 	 *
 	 * Downloads md5 checksums for the current version from WordPress.org, and
 	 * compares those checksums against the currently installed files.
@@ -47,23 +49,20 @@ class Checksum_Core_Command extends Checksum_Base_Command {
 	 * ## EXAMPLES
 	 *
 	 *     # Verify checksums
-	 *     $ wp core verify-checksums
-	 *     Success: WordPress installation verifies against checksums.
+	 *     $ wp tarosky checksum core
+	 *     {"verified":true}
 	 *
 	 *     # Verify checksums for given WordPress version
-	 *     $ wp core verify-checksums --version=4.0
-	 *     Success: WordPress installation verifies against checksums.
+	 *     $ wp tarosky checksum core --version=4.0
+	 *     {"verified":true}
 	 *
 	 *     # Verify checksums for given locale
-	 *     $ wp core verify-checksums --locale=en_US
-	 *     Success: WordPress installation verifies against checksums.
+	 *     $ wp tarosky checksum core --locale=en_US
+	 *     {"verified":true}
 	 *
 	 *     # Verify checksums for given locale
-	 *     $ wp core verify-checksums --locale=ja
-	 *     Warning: File doesn't verify against checksum: wp-includes/version.php
-	 *     Warning: File doesn't verify against checksum: readme.html
-	 *     Warning: File doesn't verify against checksum: wp-config-sample.php
-	 *     Error: WordPress installation doesn't verify against checksums.
+	 *     $ wp tarosky checksum core --locale=ja
+	 *     {"verified":false,"mismatch":["wp-includes/version.php","readme.html","wp-config-sample.php"]}
 	 *
 	 * @when before_wp_load
 	 */
@@ -105,7 +104,7 @@ class Checksum_Core_Command extends Checksum_Base_Command {
 			WP_CLI::error( "Couldn't get checksums from WordPress.org." );
 		}
 
-		$has_errors = false;
+		$result = new Result();
 		foreach ( $checksums as $file => $checksum ) {
 			// Skip files which get updated
 			if ( 'wp-content' === substr( $file, 0, 10 ) ) {
@@ -113,15 +112,13 @@ class Checksum_Core_Command extends Checksum_Base_Command {
 			}
 
 			if ( ! file_exists( ABSPATH . $file ) ) {
-				WP_CLI::warning( "File doesn't exist: {$file}" );
-				$has_errors = true;
+				$result->add_missing_file( $file );
 				continue;
 			}
 
 			$md5_file = md5_file( ABSPATH . $file );
 			if ( $md5_file !== $checksum ) {
-				WP_CLI::warning( "File doesn't verify against checksum: {$file}" );
-				$has_errors = true;
+				$result->add_mismatch_file( $file );
 			}
 		}
 
@@ -131,14 +128,14 @@ class Checksum_Core_Command extends Checksum_Base_Command {
 
 		if ( ! empty( $additional_files ) ) {
 			foreach ( $additional_files as $additional_file ) {
-				WP_CLI::warning( "File should not exist: {$additional_file}" );
+				$result->add_added_file( $additional_file );
 			}
 		}
 
-		if ( ! $has_errors ) {
-			WP_CLI::success( 'WordPress installation verifies against checksums.' );
-		} else {
-			WP_CLI::error( "WordPress installation doesn't verify against checksums." );
+		$r = $result->get();
+		echo json_encode( $r );
+		if ( ! $r['verified'] ) {
+			exit( 1 );
 		}
 	}
 

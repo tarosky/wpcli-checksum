@@ -1,14 +1,19 @@
 {
-    "name": "wp-cli/checksum-command",
+    "name": "tarosky/wpcli-checksum",
     "type": "wp-cli-package",
-    "description": "Verifies file integrity by comparing to published checksums.",
-    "homepage": "https://github.com/wp-cli/checksum-command",
+    "description": "Improve official WP-CLI checksum commands by outputting structured messages.",
+    "homepage": "https://github.com/tarosky/wpcli-checksum",
     "license": "MIT",
     "authors": [
         {
             "name": "Daniel Bachhuber",
             "email": "daniel@runcommand.io",
             "homepage": "https://runcommand.io"
+        },
+        {
+            "name": "Harai Akihiro",
+            "email": "akihiro.harai@tarosky.co.jp",
+            "homepage": "https://tarosky.co.jp"
         }
     ],
     "require": {
@@ -32,8 +37,8 @@
         },
         "bundled": true,
         "commands": [
-            "core verify-checksums",
-            "plugin verify-checksums"
+            "tarosky checksum core",
+            "tarosky checksum plugins"
         ]
     },
     "autoload": {
@@ -41,7 +46,7 @@
             "src/"
         ],
         "files": [
-            "checksum-command.php"
+            "checksum.php"
         ]
     },
     "minimum-stability": "dev",
@@ -62,6 +67,6 @@
         ]
     },
     "support": {
-        "issues": "https://github.com/wp-cli/checksum-command/issues"
+        "issues": "https://github.com/tarosky/wpcli-checksum/issues"
     }
 }
