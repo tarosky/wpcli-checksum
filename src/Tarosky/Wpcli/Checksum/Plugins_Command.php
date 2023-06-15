@@ -68,7 +68,7 @@ class Plugins_Command extends Command {
 		$succeeded = true;
 
 		foreach ( $plugins as $plugin ) {
-			$res       = $this->verify_plugin( $plugin, $version_arg, $insecure, $strict );
+			$res       = $this->verify_plugin( $plugin, $version_arg, $insecure, $strict )->get();
 			$result[]  = $res;
 			$succeeded = $succeeded && $res['verified'];
 		}
@@ -80,16 +80,13 @@ class Plugins_Command extends Command {
 	}
 
 	private function verify_plugin( $plugin, $version_arg, $insecure, $strict ) {
-		$result = [
-			'name'     => $plugin->name,
-			'verified' => true,
-		];
+		$result = new Result();
+		$result->set_name( $plugin->name );
 
 		$version = empty( $version_arg ) ? $this->get_plugin_version( $plugin->file ) : $version_arg;
 
 		if ( false === $version ) {
-			$result['verified'] = false;
-			$result['reason']   = 'plugin_version_not_found';
+			$result->set_reason( 'plugin_version_not_found' );
 			return $result;
 		}
 
@@ -98,13 +95,12 @@ class Plugins_Command extends Command {
 		try {
 			$checksums = $wp_org_api->get_plugin_checksums( $plugin->name, $version );
 		} catch ( Exception $exception ) {
-			$result['message'] = $exception->getMessage();
-			$checksums         = false;
+			$result->set_message( $exception->getMessage() );
+			$checksums = false;
 		}
 
 		if ( false === $checksums ) {
-			$result['verified'] = false;
-			$result['reason']   = 'plugin_checksum_not_found';
+			$result->set_reason( 'plugin_checksum_not_found' );
 			return $result;
 		}
 
@@ -112,13 +108,13 @@ class Plugins_Command extends Command {
 
 		foreach ( $checksums as $file => $checksum_array ) {
 			if ( ! in_array( $file, $files, true ) ) {
-				self::add_error_file( $result, 'missing', $file );
+				$result->add_missing_file( $file );
 			}
 		}
 
 		foreach ( $files as $file ) {
 			if ( ! array_key_exists( $file, $checksums ) ) {
-				self::add_error_file( $result, 'added', $file );
+				$result->add_added_file( $file );
 				continue;
 			}
 
@@ -128,9 +124,9 @@ class Plugins_Command extends Command {
 
 			$matched = self::check_file_checksum( dirname( $plugin->file ) . '/' . $file, $checksums[ $file ] );
 			if ( false === $matched ) {
-				self::add_error_file( $result, 'mismatch', $file );
+				$result->add_mismatch_file( $file );
 			} elseif ( null === $matched ) {
-				self::add_error_file( $result, 'noalgorithm', $file );
+				$result->add_noalgorithm_file( $file );
 			}
 		}
 

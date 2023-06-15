@@ -150,7 +150,7 @@ Feature: Validate checksums for WordPress install
     When I try `wp tarosky checksum core --include-root`
     Then STDOUT should be:
       """
-      {"verified":false,"added":["unknown-folder\/unknown-file.php","extra-file.php"]}
+      {"verified":false,"added":["extra-file.php","unknown-folder\/unknown-file.php"]}
       """
 
     When I run `wp tarosky checksum core`

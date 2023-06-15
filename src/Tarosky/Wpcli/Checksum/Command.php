@@ -12,8 +12,6 @@ use WP_CLI_Command;
  */
 class Command extends WP_CLI_Command {
 
-	const MAX_ERROR_FILES = 20;
-
 	/**
 	 * Normalizes directory separators to slashes.
 	 *
@@ -67,13 +65,5 @@ class Command extends WP_CLI_Command {
 	 */
 	protected function filter_file( $filepath ) {
 		return true;
-	}
-
-	protected static function add_error_file( &$result, $group, $file ) {
-		$result['verified'] = false;
-		if ( array_key_exists( $group, $result ) && self::MAX_ERROR_FILES <= count( $result[ $group ] ) ) {
-			return;
-		}
-		$result[ $group ][] = $file;
 	}
 }

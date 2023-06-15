@@ -104,7 +104,7 @@ class Core_Command extends Command {
 			WP_CLI::error( "Couldn't get checksums from WordPress.org." );
 		}
 
-		$result = [ 'verified' => true ];
+		$result = new Result();
 		foreach ( $checksums as $file => $checksum ) {
 			// Skip files which get updated
 			if ( 'wp-content' === substr( $file, 0, 10 ) ) {
@@ -112,13 +112,13 @@ class Core_Command extends Command {
 			}
 
 			if ( ! file_exists( ABSPATH . $file ) ) {
-				self::add_error_file( $result, 'missing', $file );
+				$result->add_missing_file( $file );
 				continue;
 			}
 
 			$md5_file = md5_file( ABSPATH . $file );
 			if ( $md5_file !== $checksum ) {
-				self::add_error_file( $result, 'mismatch', $file );
+				$result->add_mismatch_file( $file );
 			}
 		}
 
@@ -128,12 +128,13 @@ class Core_Command extends Command {
 
 		if ( ! empty( $additional_files ) ) {
 			foreach ( $additional_files as $additional_file ) {
-				self::add_error_file( $result, 'added', $additional_file );
+				$result->add_added_file( $additional_file );
 			}
 		}
 
-		echo json_encode( $result );
-		if ( ! $result['verified'] ) {
+		$r = $result->get();
+		echo json_encode( $r );
+		if ( ! $r['verified'] ) {
 			exit( 1 );
 		}
 	}

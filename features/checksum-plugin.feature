@@ -26,7 +26,7 @@ Feature: Validate checksums for WordPress plugins
     Then the return code should be 1
     And STDOUT should be:
       """
-      [{"name":"duplicate-post","verified":false,"missing":["duplicate-post-jetpack.php","duplicate-post-wpml.php"],"mismatch":["duplicate-post.css","duplicate-post-options.php","duplicate-post-common.php","duplicate-post.php","duplicate-post-admin.php"]}]
+      [{"name":"duplicate-post","verified":false,"mismatch":["duplicate-post-admin.php","duplicate-post-common.php","duplicate-post-options.php","duplicate-post.css","duplicate-post.php"],"missing":["duplicate-post-jetpack.php","duplicate-post-wpml.php"]}]
       """
     And STDERR should be empty
 
@@ -51,7 +51,7 @@ Feature: Validate checksums for WordPress plugins
     When I try `wp tarosky checksum plugins duplicate-post`
     Then STDOUT should be:
       """
-      [{"name":"duplicate-post","verified":false,"missing":["duplicate-post.css"],"mismatch":["duplicate-post.php"]}]
+      [{"name":"duplicate-post","verified":false,"mismatch":["duplicate-post.php"],"missing":["duplicate-post.css"]}]
       """
 
     When I run `touch wp-content/plugins/duplicate-post/additional-file.php`
@@ -60,7 +60,7 @@ Feature: Validate checksums for WordPress plugins
     When I try `wp tarosky checksum plugins duplicate-post`
     Then STDOUT should be:
       """
-      [{"name":"duplicate-post","verified":false,"missing":["duplicate-post.css"],"added":["additional-file.php"],"mismatch":["duplicate-post.php"]}]
+      [{"name":"duplicate-post","verified":false,"added":["additional-file.php"],"mismatch":["duplicate-post.php"],"missing":["duplicate-post.css"]}]
       """
 
   Scenario: Soft changes are only reported in strict mode
@@ -95,7 +95,7 @@ Feature: Validate checksums for WordPress plugins
     When I try `wp tarosky checksum plugins release-notes --strict`
     Then STDOUT should be:
       """
-      [{"name":"release-notes","verified":false,"mismatch":["readme.txt","README.md"]}]
+      [{"name":"release-notes","verified":false,"mismatch":["README.md","readme.txt"]}]
       """
 
   # WPTouch 4.3.22 contains multiple checksums for some of its files.
