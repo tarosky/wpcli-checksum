@@ -16,11 +16,10 @@
             "homepage": "https://tarosky.co.jp"
         }
     ],
-    "require": {
-        "wp-cli/wp-cli": "^2.5"
-    },
+    "require": {},
     "require-dev": {
         "wp-cli/extension-command": "^1.2 || ^2",
+        "wp-cli/wp-cli": "^2.5",
         "wp-cli/wp-cli-tests": "^3.1"
     },
     "config": {
