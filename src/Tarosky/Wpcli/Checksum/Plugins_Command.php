@@ -52,8 +52,6 @@ class Plugins_Command extends Command {
 	 *     [{"name":"akismet","verified":true}]
 	 */
 	public function __invoke( $args, $assoc_args ) {
-		$result = [];
-
 		$fetcher     = new UnfilteredPlugin();
 		$all         = (bool) Utils\get_flag_value( $assoc_args, 'all', false );
 		$strict      = (bool) Utils\get_flag_value( $assoc_args, 'strict', false );
@@ -68,12 +66,11 @@ class Plugins_Command extends Command {
 		$succeeded = true;
 
 		foreach ( $plugins as $plugin ) {
-			$res       = $this->verify_plugin( $plugin, $version_arg, $insecure, $strict )->get();
-			$result[]  = $res;
-			$succeeded = $succeeded && $res['verified'];
+			$result = $this->verify_plugin( $plugin, $version_arg, $insecure, $strict )->get();
+			echo json_encode( $result ) . "\n";
+			$succeeded = $succeeded && $result['verified'];
 		}
 
-		echo json_encode( $result );
 		if ( ! $succeeded ) {
 			exit( 1 );
 		}

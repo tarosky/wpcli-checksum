@@ -11,14 +11,14 @@ Feature: Validate checksums for WordPress plugins
     Then the return code should be 0
     And STDOUT should be:
       """
-      [{"name":"duplicate-post","verified":true}]
+      {"name":"duplicate-post","verified":true}
       """
     And STDERR should be empty
 
     When I run `wp tarosky checksum plugins duplicate-post --version=3.2.1`
     Then STDOUT should be:
       """
-      [{"name":"duplicate-post","verified":true}]
+      {"name":"duplicate-post","verified":true}
       """
     And STDERR should be empty
 
@@ -26,7 +26,7 @@ Feature: Validate checksums for WordPress plugins
     Then the return code should be 1
     And STDOUT should be:
       """
-      [{"name":"duplicate-post","verified":false,"mismatch":["duplicate-post-admin.php","duplicate-post-common.php","duplicate-post-options.php","duplicate-post.css","duplicate-post.php"],"missing":["duplicate-post-jetpack.php","duplicate-post-wpml.php"]}]
+      {"name":"duplicate-post","verified":false,"mismatch":["duplicate-post-admin.php","duplicate-post-common.php","duplicate-post-options.php","duplicate-post.css","duplicate-post.php"],"missing":["duplicate-post-jetpack.php","duplicate-post-wpml.php"]}
       """
     And STDERR should be empty
 
@@ -42,7 +42,7 @@ Feature: Validate checksums for WordPress plugins
     When I try `wp tarosky checksum plugins duplicate-post`
     Then STDOUT should be:
       """
-      [{"name":"duplicate-post","verified":false,"mismatch":["duplicate-post.php"]}]
+      {"name":"duplicate-post","verified":false,"mismatch":["duplicate-post.php"]}
       """
 
     When I run `rm wp-content/plugins/duplicate-post/duplicate-post.css`
@@ -51,7 +51,7 @@ Feature: Validate checksums for WordPress plugins
     When I try `wp tarosky checksum plugins duplicate-post`
     Then STDOUT should be:
       """
-      [{"name":"duplicate-post","verified":false,"mismatch":["duplicate-post.php"],"missing":["duplicate-post.css"]}]
+      {"name":"duplicate-post","verified":false,"mismatch":["duplicate-post.php"],"missing":["duplicate-post.css"]}
       """
 
     When I run `touch wp-content/plugins/duplicate-post/additional-file.php`
@@ -60,7 +60,7 @@ Feature: Validate checksums for WordPress plugins
     When I try `wp tarosky checksum plugins duplicate-post`
     Then STDOUT should be:
       """
-      [{"name":"duplicate-post","verified":false,"added":["additional-file.php"],"mismatch":["duplicate-post.php"],"missing":["duplicate-post.css"]}]
+      {"name":"duplicate-post","verified":false,"added":["additional-file.php"],"mismatch":["duplicate-post.php"],"missing":["duplicate-post.css"]}
       """
 
   Scenario: Soft changes are only reported in strict mode
@@ -75,13 +75,13 @@ Feature: Validate checksums for WordPress plugins
     When I run `wp tarosky checksum plugins release-notes`
     Then STDOUT should be:
       """
-      [{"name":"release-notes","verified":true}]
+      {"name":"release-notes","verified":true}
       """
 
     When I try `wp tarosky checksum plugins release-notes --strict`
     Then STDOUT should be:
       """
-      [{"name":"release-notes","verified":false,"mismatch":["readme.txt"]}]
+      {"name":"release-notes","verified":false,"mismatch":["readme.txt"]}
       """
 
     Given "Release Notes" replaced with "Different Name" in the wp-content/plugins/release-notes/README.md file
@@ -89,13 +89,13 @@ Feature: Validate checksums for WordPress plugins
     When I run `wp tarosky checksum plugins release-notes`
     Then STDOUT should be:
       """
-      [{"name":"release-notes","verified":true}]
+      {"name":"release-notes","verified":true}
       """
 
     When I try `wp tarosky checksum plugins release-notes --strict`
     Then STDOUT should be:
       """
-      [{"name":"release-notes","verified":false,"mismatch":["README.md","readme.txt"]}]
+      {"name":"release-notes","verified":false,"mismatch":["README.md","readme.txt"]}
       """
 
   # WPTouch 4.3.22 contains multiple checksums for some of its files.
@@ -110,7 +110,7 @@ Feature: Validate checksums for WordPress plugins
     When I run `wp tarosky checksum plugins wptouch`
     Then STDOUT should be:
       """
-      [{"name":"wptouch","verified":true}]
+      {"name":"wptouch","verified":true}
       """
 
   Scenario: Throws an error if provided with neither plugin names nor the --all flag
