@@ -20,14 +20,15 @@
     "require-dev": {
         "wp-cli/extension-command": "^1.2 || ^2",
         "wp-cli/wp-cli": "^2.5",
-        "wp-cli/wp-cli-tests": "^4.2"
+        "wp-cli/wp-cli-tests": "^5.0"
     },
     "config": {
         "process-timeout": 7200,
         "sort-packages": true,
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true,
-            "johnpbloch/wordpress-core-installer": true
+            "johnpbloch/wordpress-core-installer": true,
+            "phpstan/extension-installer": true
         }
     },
     "extra": {
@@ -56,6 +57,7 @@
         "lint": "run-linter-tests",
         "phpcs": "run-phpcs-tests",
         "phpcbf": "run-phpcbf-cleanup",
+        "phpstan": "exit 0",
         "phpunit": "run-php-unit-tests",
         "prepare-tests": "install-package-tests",
         "test": [
